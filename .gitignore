@@ -1,5 +1,5 @@
 /target
-assets/*_input.txt
+assets/*.txt
 assets/*test*
 enonces
 src/*test*.rs
