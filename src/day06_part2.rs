@@ -79,8 +79,8 @@ fn test_obstruction(grid: &Grid2D, start_pos: (usize, usize), obs: (usize, usize
         if pos.is_none() {
             // end
             return false;
-        } else if !prev_positions.contains(&(pos, dir.current)) {
-            prev_positions.push((pos, dir.current));
+        } else if !prev_positions.contains(&(pos, dir)) {
+            prev_positions.push((pos, dir));
         } else {
             // in a loop
             return true;
