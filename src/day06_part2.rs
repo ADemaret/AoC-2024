@@ -2,6 +2,7 @@ use std::time::Instant;
 
 // personal functions
 use crate::utils::grid2d::Grid2D;
+use crate::utils::grid_dir::GridDir;
 // use crate::utils::pause;
 //use crate::utils::math;
 
@@ -24,44 +25,38 @@ pub fn main() {
 //
 
 fn get_answer(input: &str) -> Option<usize> {
+    // get grid and start position
     let mut grid = Grid2D::new(input);
+    let start_pos = grid.get_vec_of_char_positions('^')[0];
+    grid.set_at(start_pos, '.');
+
     // grid.print();
 
-    // remember grid
-    let grid_org = grid.clone();
-
-    // first moves to get the positions
-    // move
-    let start_pos = grid.get_vec_of_char_positions('^')[0];
-    // start up
-    let mut dir = (-1, 0);
+    // usual path of the guard
+    let mut dir = GridDir::new("Up");
     let mut pos = Some(start_pos);
-    let mut positions = Vec::new();
-    positions.push((pos.unwrap().0, pos.unwrap().1));
+    let mut path = Vec::new();
+    path.push(pos.unwrap());
     loop {
-        pos = one_move(&mut grid, (pos.unwrap().0, pos.unwrap().1), &mut dir);
+        pos = one_move(&grid, pos.unwrap(), &mut dir);
         if pos.is_none() {
             // end
             break;
-        } else if !positions.contains(&(pos.unwrap().0, pos.unwrap().1)) {
+        } else if !path.contains(&(pos.unwrap().0, pos.unwrap().1)) {
             if let Some(upos) = pos {
-            positions.push(upos);
+                path.push(upos);
             } else {
                 panic!();
             }
-
-            // println!("{:?}",positions);
         }
     }
 
     // then test obstructions on the positions
-    grid = grid_org;
-
     let mut result = 0;
     for l in 0..grid.max_l {
-        println!("line {}/{}", l, grid.max_l);
+        // println!("line {}/{}", l, grid.max_l);
         for c in 0..grid.max_c {
-            if positions.contains(&(l, c)) && test_obstruction(&grid, (l, c)) {
+            if path.contains(&(l, c)) && test_obstruction(&grid, start_pos, (l, c)) {
                 result += 1;
             }
         }
@@ -69,73 +64,48 @@ fn get_answer(input: &str) -> Option<usize> {
     Some(result)
 }
 
-fn test_obstruction(grid: &Grid2D, obs: (usize, usize)) -> bool {
+fn test_obstruction(grid: &Grid2D, start_pos: (usize, usize), obs: (usize, usize)) -> bool {
     // move
-    let start_pos = grid.get_vec_of_char_positions('^')[0];
-    // println!("start-pos : {:?}", start_pos);
-    // start up
-    let mut dir = (-1, 0);
+    let mut dir = GridDir::new("Up");
     let mut pos = Some(start_pos);
     let mut positions = Vec::new();
     let mut prev_positions = Vec::new();
-    positions.push((pos.unwrap().0, pos.unwrap().1));
+    positions.push(pos.unwrap());
+
     let mut grid2 = grid.clone();
-    grid2.grid[obs.0][obs.1] = 'O';
+    grid2.set_at(obs, 'O');
     loop {
-        pos = one_move(&mut grid2, (pos.unwrap().0, pos.unwrap().1), &mut dir);
+        pos = one_move(&grid2, (pos.unwrap().0, pos.unwrap().1), &mut dir);
         if pos.is_none() {
             // end
             return false;
-        } else if !prev_positions.contains(&(pos, dir)) {
-            prev_positions.push((pos, dir));
-            // println!("{:?}",positions);
+        } else if !prev_positions.contains(&(pos, dir.current)) {
+            prev_positions.push((pos, dir.current));
         } else {
+            // in a loop
             return true;
         }
     }
 }
 
-fn one_move(
-    grid: &mut Grid2D,
-    start_pos: (usize, usize),
-    dir: &mut (isize, isize),
-) -> Option<(usize, usize)> {
+fn one_move(grid: &Grid2D, start_pos: (usize, usize), dir: &mut GridDir) -> Option<(usize, usize)> {
     let pos = start_pos;
-    grid.grid[pos.0][pos.1] = '.';
 
     // grid.print_with_vec(&[pos], 'X');
     // pause::pause();
 
-    // out of boundaries
-    if (pos.0 == 0 && dir.0 == -1)
-        || (pos.1 == 0 && dir.1 == -1)
-        || (pos.0 == grid.max_l - 1 && dir.0 > 0)
-        || (pos.1 == grid.max_c - 1 && dir.1 > 0)
-    {
-        return None;
-    }
-    // move
-    let next_pos = (
-        (pos.0 as isize + dir.0) as usize,
-        (pos.1 as isize + dir.1) as usize,
-    );
-    if grid.grid[next_pos.0][next_pos.1] != '.' {
-        match dir {
-            // up -> right
-            (-1, 0) => *dir = (0, 1),
-            // right -> down
-            (0, 1) => *dir = (1, 0),
-            // down -> left
-            (1, 0) => *dir = (0, -1),
-            // left -> up
-            (0, -1) => *dir = (-1, 0),
-            _ => {
-                panic!("wrong direction")
-            }
+    if let Some(next_pos) = dir.move_point(grid, pos) {
+        // move
+        if grid.get_at(next_pos) != '.' {
+            dir.move_right();
+            Some(pos)
+        } else {
+            Some(next_pos)
         }
-        return Some(pos);
+    } else {
+        // out of boundaries
+        None
     }
-    Some(next_pos)
 }
 
 #[cfg(test)]

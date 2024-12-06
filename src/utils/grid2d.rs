@@ -112,7 +112,20 @@ impl Grid2D {
         println!("─┘");
     }
 
-    
+    ///
+    /// Renvoie le caractère à un point donné
+    /// 
+    pub fn get_at(&self,pt:(usize,usize)) -> char {
+        return self.grid[pt.0][pt.1]
+    }
+
+    ///
+    /// Modifie le caractère à un point donné
+    /// 
+    pub fn set_at(&mut self,pt:(usize,usize),value:char) {
+        self.grid[pt.0][pt.1] = value;
+    }
+
     ///
     /// Renvoie le nombre d'occurence du caractère cc dans la grille
     ///
