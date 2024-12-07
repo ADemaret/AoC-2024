@@ -12,99 +12,101 @@ pub fn main() {
     // let input = include_str!("../assets/day07_input_demo1.txt");
     let input = include_str!("../assets/day07_input.txt");
 
-    if let Some(answer) = get_answer(input) {
-        println!("The answer is : {}", answer);
-    } else {
-        println!("No answer found");
-    }
+    println!("The answer is : {}", get_answer(input));
     let elapsed1 = now.elapsed();
     println!("Elapsed: {:.2?}", elapsed1);
 }
 
-// 205 too low
-// 3749 too low
+//
 
-fn get_answer(input: &str) -> Option<u64> {
-    let mut equs = Vec::new();
-    input.lines().for_each(|line| {
-        let parts = line.split_once(": ").unwrap();
-        let sol = parts.0.parse::<u64>().unwrap();
-        let params = parts
-            .1
-            .split_whitespace()
-            .map(|x| x.parse::<u64>().unwrap())
-            .collect::<Vec<_>>();
-        equs.push((sol, params));
-    });
-
-    let mut result = 0;
-    let mut possibilities: Vec<u64> = Vec::new();
-    for equ in equs.iter() {
-
-        possibilities.push(next_operation(equ.clone(), 0, 0, "add"));
-        possibilities.push(next_operation(equ.clone(), 0, 0, "mult"));
-        possibilities.push(next_operation(equ.clone(), 0, 0, "con"));
-        // println!("equ {:?} => first pair gives {:?}",equ,possibilities);
-        
-
-        for index in 2..equ.1.len() {
-            
-            let mut to_add = Vec::new();
-            for poss in possibilities.iter_mut() {
-                if *poss != 0 {
-                    to_add.push(next_operation(equ.clone(), poss.clone(), index, "add"));
-                    to_add.push(next_operation(equ.clone(), poss.clone(), index, "con"));
-                    *poss = next_operation(equ.clone(), poss.clone(), index, "mult");                    
-                }
+fn get_answer(input: &str) -> u64 {
+    input
+        .lines()
+        .map(|line| {
+            let parts = line.split_once(": ").unwrap();
+            let sol = parts.0.parse::<u64>().unwrap();
+            let params = parts
+                .1
+                .split_whitespace()
+                .map(|x| x.parse::<u64>().unwrap())
+                .collect::<Vec<_>>();
+            if sol_exists(sol, params) {
+                sol
+            } else {
+                0
             }
-            for ta in to_add {
-                possibilities.push(ta.clone());
-            }
-            // println!("equ {:?} => index {} gives {:?}",equ,index, possibilities);
-        }        
-        // println!("equ {:?} => done {:?}",equ,possibilities);
-        if possibilities.contains(&equ.0){
-            result += equ.0;
-        }
-        possibilities.clear();
-
-    }
-    Some(result)
+        })
+        .sum()
 }
 
-fn next_operation(equ: (u64, Vec<u64>), temp_sol: u64, index: usize, sign: &str) -> u64 {
-    let poss : u64;
+fn sol_exists(sol: u64, params: Vec<u64>) -> bool {
+    let mut possibilities: Vec<u64> = Vec::new();
+
+    possibilities.push(next_operation(sol, params.clone(), 0, 0, "add"));
+    possibilities.push(next_operation(sol, params.clone(), 0, 0, "mult"));
+    possibilities.push(next_operation(sol, params.clone(), 0, 0, "con"));
+    // println!("equ {:?} => first pair gives {:?}",equ,possibilities);
+
+    for index in 2..params.len() {
+        let mut to_add = Vec::new();
+        for poss in possibilities.iter_mut() {
+            if *poss != 0 {
+                to_add.push(next_operation(sol, params.clone(), poss.clone(), index, "add"));
+                to_add.push(next_operation(sol, params.clone(), poss.clone(), index, "con"));
+                *poss = next_operation(sol, params.clone(), poss.clone(), index, "mult");
+            }
+        }
+        for ta in to_add {
+            possibilities.push(ta.clone());
+        }
+        // println!("equ {:?} => index {} gives {:?}",equ,index, possibilities);
+    }
+    // println!("equ {:?} => done {:?}",equ,possibilities);
+    if possibilities.contains(&sol) {
+        return true;
+    }
+    false
+}
+
+fn next_operation(sol: u64, param: Vec<u64>, temp_sol: u64, index: usize, sign: &str) -> u64 {
+    let poss: u64;
     match sign {
         "add" => {
             if index == 0 {
-                // print!(" {}+{}",equ.1[0],equ.1[1]);
-                poss = equ.1[0] + equ.1[1];
+                // print!(" {}+{}",param[0],param[1]);
+                poss = param[0] + param[1];
             } else {
-                // print!(" {}+{}",temp_sol,equ.1[index]);
-                poss = temp_sol + equ.1[index];
+                // print!(" {}+{}",temp_sol,param[index]);
+                poss = temp_sol + param[index];
             }
         }
         "mult" => {
             if index == 0 {
-                // print!(" {}x{}",equ.1[0],equ.1[1]);
-                poss = equ.1[0] * equ.1[1];
+                // print!(" {}x{}",param[0],param[1]);
+                poss = param[0] * param[1];
             } else {
-                // print!(" {}x{}",temp_sol,equ.1[index]);
-                poss = temp_sol * equ.1[index];
+                if index == param.len() - 1 {
+                    if sol % param[index] != 0 {
+                        //println!("{}%{}={} refused",sol,param[index],sol%param[index]);
+                        return 0;
+                    }
+                }
+                // print!(" {}x{}",temp_sol,param[index]);
+                poss = temp_sol * param[index];
             }
         }
         "con" => {
             if index == 0 {
-                // print!(" {}x{}",equ.1[0],equ.1[1]);
-                poss = my_concat(equ.1[0],equ.1[1]);
+                // print!(" {}x{}",param[0],param[1]);
+                poss = my_concat(param[0], param[1]);
             } else {
-                // print!(" {}x{}",temp_sol,equ.1[index]);
-                poss = my_concat(temp_sol,equ.1[index]);
+                // print!(" {}x{}",temp_sol,param[index]);
+                poss = my_concat(temp_sol, param[index]);
             }
         }
         _ => panic!(),
     }
-    if poss > equ.0 {
+    if poss > sol {
         // println!(" = {} too high =>0",poss);
         return 0;
     }
@@ -112,11 +114,11 @@ fn next_operation(equ: (u64, Vec<u64>), temp_sol: u64, index: usize, sign: &str)
     poss
 }
 
-fn my_concat(a:u64,b:u64) ->u64 {
+fn my_concat(a: u64, b: u64) -> u64 {
     // length of b
-    let width = b.to_string().len();
+    let width = b.ilog10()+1;
     // println!("concat of {},{} is {}",a,b,a * 10u64.pow(width as u32)+b);
-    a * 10u64.pow(width as u32)+b
+    a * 10u64.pow(width) + b
 }
 
 #[cfg(test)]
@@ -127,8 +129,11 @@ mod tests {
     fn test_total() {
         assert_eq!(
             get_answer(include_str!("../assets/day07_input_demo1.txt")),
-            Some(11387)
+            11387
         );
-        assert_eq!(get_answer(include_str!("../assets/day07_input.txt")), Some(472290821152397));
+        assert_eq!(
+            get_answer(include_str!("../assets/day07_input.txt")),
+            472290821152397
+        );
     }
 }
