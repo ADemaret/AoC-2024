@@ -202,6 +202,33 @@ impl Grid2D {
     }
 
     ///
+    /// Renvoie un vecteur des caractères des 4 cases adjacentes
+    /// (gauche, droite, haut, bas)
+    ///
+    pub fn get_adjacents_ortho(&self, l: usize, c: usize ) -> Vec<(usize, usize, char)> {
+        let mut ret = Vec::new();
+        let adj: [(i32, i32); 4] = [
+            (-1, 0),
+            (0, -1),
+            (0, 1),
+            (1, 0),
+        ];
+    
+        for (dl, dc) in adj {
+            if (dl < 0 && l == 0) ||
+               (dc < 0 && c == 0 ) ||
+               (dl > 0 && l+1 == self.max_l) ||
+               (dc > 0 && c+1 == self.max_c )
+            {} else {
+                let new_l = (dl + (l as i32)) as usize;
+                let new_c = (dc + (c as i32)) as usize;
+                ret.push((new_l, new_c, self.grid[new_l][new_c]));
+            }
+        }
+        ret
+    }
+
+    ///
     /// rotate the grid 90° counter-clockwise
     /// 
     #[allow(clippy::needless_range_loop)]
