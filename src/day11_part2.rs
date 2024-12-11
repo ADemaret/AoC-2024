@@ -87,10 +87,10 @@ mod tests {
 
     #[test]
     fn test_total() {
-        // assert_eq!(
-        //     get_answer(include_str!("../assets/day11_input_demo1.txt")),
-        //     Some(55312)
-        // );
+        assert_eq!(
+            get_answer(include_str!("../assets/day11_input_demo1.txt")),
+            Some(65601038650482)
+        );
         assert_eq!(
             get_answer(include_str!("../assets/day11_input.txt")),
             Some(259112729857522)
