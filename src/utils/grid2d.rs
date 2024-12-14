@@ -6,7 +6,7 @@
 // use crate::utils::pause;
 
 // Au dessus de MAX_AFFICHAGE, print() ne fait rien
-const MAX_AFFICHAGE: usize = 99;
+const MAX_AFFICHAGE: usize = 105;
 
 #[derive(Debug,Clone,PartialEq,Eq)]
 pub struct Grid2D {
@@ -103,7 +103,7 @@ impl Grid2D {
                     print!("  {}", ch);
                 }
             });
-            println!(" │");            
+            println!(" │");
         });
         
         // bord inférieur
