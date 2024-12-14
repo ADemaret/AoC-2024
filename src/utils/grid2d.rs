@@ -33,6 +33,22 @@ impl Grid2D {
             Grid2D { max_l, max_c,grid}
         }
     
+    /// 
+    /// Crée une grille de max_l x max_c avec le char ch
+    /// 
+    pub fn new_empty(max_l:usize, max_c:usize,ch:char) -> Grid2D {
+        let mut grid = Vec::new();
+
+        for _ in 0..max_l {
+            let mut vec_l = Vec::new();
+            for _ in 0..max_c {
+                vec_l.push(ch);
+            }
+            grid.push(vec_l);        
+        }                
+        Grid2D { max_l, max_c,grid}
+    }
+
     ///
     /// Affiche la grille avec numéros de lignes et de colonnes
     /// 
