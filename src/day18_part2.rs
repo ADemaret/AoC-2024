@@ -3,7 +3,7 @@ use std::time::Instant;
 
 // personal functions
 use crate::utils::grid2d::Grid2D;
-use crate::utils::pause;
+// use crate::utils::pause;
 //use crate::utils::math;
 
 const DEBUG: bool = false;
@@ -27,34 +27,49 @@ pub fn main() {
 //
 
 fn get_answer(input: &str) -> Option<String> {
-    for result in 1025..3450 {
-        let data = input
-            .lines()
-            .map(|line| {
-                let v = line
-                    .split(',')
-                    .filter_map(|x| x.parse::<usize>().ok())
-                    .collect::<Vec<usize>>();
-                (v[1], v[0])
-            })
+    let data = input
+        .lines()
+        .map(|line| {
+            let v = line
+                .split(',')
+                .filter_map(|x| x.parse::<usize>().ok())
+                .collect::<Vec<usize>>();
+            (v[1], v[0])
+        })
+        .collect::<Vec<_>>();
+
+    let mut min = 0;
+    let mut max = data.len();
+
+    loop {
+        let result = (min + max) / 2;
+        if result == data.len()-1 {
+            return None;
+        }
+        let subdata = data
+            .clone()
+            .into_iter()
             .take(result)
-            .collect::<Vec<_>>();
+            .collect::<Vec<(usize, usize)>>();
 
         let mut grid = Grid2D::new_empty(71, 71, '.');
-        for d in &data {
+        for d in &subdata {
             grid.set_at(*d, '#');
         }
         // grid.print();
         //grid.print_with_vec(&data, '#');
 
-        if let Some(d) = dijkstra(&grid, (0, 0), (grid.max_l - 1, grid.max_c - 1)) {
+        if dijkstra(&grid, (0, 0), (grid.max_l - 1, grid.max_c - 1)).is_some() {
             // println!("{} {}", result, d);
+            min += (max - min) / 2;
         } else {
             // println!("{} boum", result);
-            return Some(format!("{},{}",data[result-1].1,data[result-1].0));
+            max -= (max - min) / 2;
+        }
+        if min + 1 == max {
+            return Some(format!("{},{}", data[result].1, data[result].0));
         }
     }
-    None
 }
 
 fn dijkstra(
