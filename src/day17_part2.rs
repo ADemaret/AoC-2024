@@ -1,15 +1,15 @@
-use std::time::Instant;
+use std::{collections::VecDeque, time::Instant};
 
 // personal functions
 //use crate::utils::grid2d;
-//use crate::utils::pause;
+use crate::utils::pause;
 //use crate::utils::math;
 
 pub fn main() {
-    println!("-- Advent of Code - Day 17 - Part 1 --");
+    // println!("-- Advent of Code - Day 17 - Part 2 --");
     let now = Instant::now();
 
-    // let input = include_str!("../assets/day17_input_demo1.txt");
+    // let input = include_str!("../assets/day17_input_demo2.txt");
     let input = include_str!("../assets/day17_input.txt");
 
     if let Some(answer) = get_answer(input) {
@@ -23,8 +23,9 @@ pub fn main() {
 
 //
 
-fn get_answer(input: &str) -> Option<String> {
+fn get_answer(input: &str) -> Option<usize> {
     // parse
+    let mut prog_str = "";
     let mut regs = Vec::new();
     let mut prgs = Vec::new();
     input.lines().enumerate().for_each(|(i, line)| {
@@ -36,6 +37,7 @@ fn get_answer(input: &str) -> Option<String> {
             );
         }
         if i == 4 {
+            (_, prog_str) = line.split_at(9);
             prgs = line
                 .split([' ', ','])
                 .filter_map(|x| x.parse::<usize>().ok())
@@ -43,61 +45,74 @@ fn get_answer(input: &str) -> Option<String> {
         }
     });
 
-    let mut regs_org = regs.clone();
-    let prgs_org = prgs.clone();
-    println!("regs : {:?}", regs);
-    println!("prgs : {:?}", prgs);
-    let a = 0;
-    let b = 1;
-    let c = 2;
+    // println!("regs : {:b},{:b},{:b}", regs[0], regs[1], regs[2]);
+    // println!("prgs : {:?}", prgs);
 
-    // // test
-    // // If register C contains 9, the program 2,6 would set register B to 1.
-    // regs[c] = 9;
-    // prgs = vec![2,6];
-    // part1(&mut regs, &prgs);
-    // assert_eq!(regs[b],1);
-    // // If register A contains 10, the program 5,0,5,1,5,4 would output 0,1,2.
-    // regs[a] = 10;
-    // prgs = vec![5,0,5,1,5,4];
-    // assert_eq!(part1(&mut regs, &prgs),Some("0,1,2".to_string()));    
-    // // If register A contains 2024, the program 0,1,5,4,3,0 would output 4,2,5,6,7,7,7,7,3,1,0 and leave 0 in register A.
-    // regs[a] = 2024;
-    // prgs = vec![0,1,5,4,3,0];
-    // assert_eq!(part1(&mut regs, &prgs),Some("4,2,5,6,7,7,7,7,3,1,0".to_string()));
-    // assert_eq!(regs[a],0);
-    // // If register B contains 29, the program 1,7 would set register B to 26.
-    // regs[b] = 29;
-    // prgs = vec![1,7];
-    // part1(&mut regs, &prgs);
-    // assert_eq!(regs[b],26);
-    // // If register B contains 2024 and register C contains 43690, the program 4,0 would set register B to 44354.
-    // regs[b] = 2024;
-    // regs[c] = 43690;
-    // prgs = vec![4,0];
-    // part1(&mut regs, &prgs);
-    // assert_eq!(regs[b],44354);
-    
-    part1(&mut regs_org, &prgs_org)
-
+    Some(bfs(&mut regs,&prgs))
 }
 
-fn part1(regs: &mut Vec<usize>, prgs: &Vec<usize>) -> Option<String> {
+fn bfs(
+    regs : &mut Vec<usize>,
+    prgs: &Vec<usize>) -> usize {
+
+    let mut regs_org = regs.clone();
+    let prgs_org = prgs.clone();
+    let mut queue = VecDeque::new();
+    let offset = 3;
+
+    let pos = prgs.len();
+    queue.push_back((pos, 0));
+
+    while let Some((pos, a_result)) = queue.pop_front() {
+        // trouvé
+        if pos == 0 {
+            return a_result;
+        }
+
+        // MAIN LOOP
+        let mut test;
+        // println!("searching for pos {} = {} ", pos, prgs[pos]);
+        //println!("test with A = {:b}",(1<<(offset*(15-pos)))+base);
+        for i in 0..(1 << offset) {
+            regs_org[0] = (a_result << offset) + i;
+            regs_org[1] = 0;
+            regs_org[2] = 0;
+            test = regs_org[0];
+            let prog2 = part1(&mut regs_org, &prgs_org);
+            // println!("{:b} => {:?}", test, prog2);
+            if compare_n_last(prgs, &prog2, 17 - pos) {
+                // println!(" ** found with {:b} => {:?}", test, prog2);
+                //let new_result = test;
+                // pause::pause();
+                queue.push_back((pos - 1, test));
+            }
+        }
+    }
+    0
+}
+// not found
+
+fn compare_n_last(a: &[usize], b: &[usize], n: usize) -> bool {
+    // println!(" Comparing first {n} elements of {:?} and {:?}", a, b);
+    a.get(a.len() - n..) == b.get(b.len() - n..)
+}
+
+fn part1(regs: &mut [usize], prgs: &[usize]) -> Vec<usize> {
     let a = 0;
     let b = 1;
     let c = 2;
 
     let mut pter: usize = 0;
     //let mut todo = VecDeque::new();
-    let mut opcode;
+    // let mut opcode;
     let mut lit_operand;
     let mut comb_operand = 0;
     let mut do_not_jump = false;
-    let mut out = String::new();
+    let mut out = Vec::new();
     loop {
-        // println!("regs : {:?}", regs);
+        // println!("regs : {:b},{:b},{:b}", regs[0],regs[1],regs[2]);
 
-        opcode = prgs[pter];
+        // opcode = prgs[pter];
         match prgs[pter + 1] {
             0 => {
                 lit_operand = 0;
@@ -141,7 +156,7 @@ fn part1(regs: &mut Vec<usize>, prgs: &Vec<usize>) -> Option<String> {
                 let num = regs[0];
                 let den = 2_usize.pow(comb_operand as u32);
                 regs[a] = num / den;
-                // println!("{}/{} => regs[a] = {}", num, den, regs[a]);
+                // println!("A = A >> x => {}/{} => regs[a] = {}", num, den, regs[a]);
             }
             1 => {
                 // println!("-- bxl");
@@ -173,21 +188,16 @@ fn part1(regs: &mut Vec<usize>, prgs: &Vec<usize>) -> Option<String> {
                 // calculates the bitwise XOR of register B and register C, then stores the result in register B. (For legacy reasons, this instruction reads an operand but ignores it.)
                 // print!("{}^{} => ", regs[b], regs[c]);
                 regs[b] ^= regs[c];
-                // println!("regs[b] = {}", regs[b]);
+                // println!("regs[b] = {:b}", regs[b]);
             }
             5 => {
                 // println!("-- out");
                 //calculates the value of its combo operand modulo 8, then outputs that value. (If a program outputs multiple values, they are separated by commas.)
                 // print!("{}%8 => out ", comb_operand);
-                let z1 = format!("{}", comb_operand % 8)
-                    .chars()
-                    .map(|x| x.to_string())
-                    .collect::<Vec<_>>()
-                    .join(",");
-                // print!(" => {} ", z1);
-                out += z1.as_str();
-                out += ",";
+                let z1 = comb_operand % 8;
+                out.push(z1);
                 // println!("=> out = {}", out);
+                // pause::pause();
             }
             6 => {
                 // println!("-- bdv");
@@ -219,8 +229,7 @@ fn part1(regs: &mut Vec<usize>, prgs: &Vec<usize>) -> Option<String> {
         }
     }
 
-    out.pop(); // remove last ','
-    Some(out)
+    out
 }
 
 #[cfg(test)]
@@ -230,9 +239,8 @@ mod tests {
     #[test]
     fn test_total() {
         assert_eq!(
-            get_answer(include_str!("../assets/day17_input_demo1.txt")),
-            Some("4,6,3,5,6,3,5,2,1,0".to_string())
+            get_answer(include_str!("../assets/day17_input.txt")),
+            Some(37222273957364)
         );
-        assert_eq!(get_answer(include_str!("../assets/day17_input.txt")), Some("7,1,5,2,4,0,7,6,1".to_string()));
     }
 }
