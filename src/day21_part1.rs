@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{collections::HashMap, time::Instant};
 
 use itertools::Itertools;
 
@@ -28,19 +28,21 @@ pub fn main() {
 //
 
 fn get_answer(input: &str) -> Option<usize> {
+    let mut memo: HashMap<Vec<char>, usize> = HashMap::new();
+
     let result = input
         .lines()
         .map(|line| {
             let code = line.chars().collect::<Vec<_>>();
-            let len = get_moves(&code);
+            let len = get_moves(&mut memo, &code);
             let num = line
                 .chars()
                 .take(3)
                 .collect::<String>()
                 .parse::<usize>()
                 .unwrap();
-            // println!("line {}, code {:?}", line, code);
-            // longueur
+            // println!("line {}, code {:?}, len {}", line, code, len);
+            // println!("memo size is {}",memo.len());
             num * len
         })
         .sum::<usize>();
@@ -48,34 +50,58 @@ fn get_answer(input: &str) -> Option<usize> {
     Some(result)
 }
 
-fn get_moves(code: &Vec<char>) -> usize {
-    
+fn get_moves(memo: &mut HashMap<Vec<char>, usize>, code: &Vec<char>) -> usize {
     let numpad = set_numpad();
     let dirpad = set_dirpad();
 
+    let mut length = Vec::new();
     let mut all_paths = get_num_paths(&numpad, code);
-    for _ in 0 .. 2 {
-        get_dir_paths(&dirpad, &mut all_paths);
+    // println!("{:?}", all_paths);
+    for ap in &all_paths {
+        let mut sublen = 0;
+        let mut ll = 0;
+        // cut string
+        let string: String = ap.into_iter().collect();
+        let buff = string.split('A').collect::<Vec<&str>>();
+        // println!("buf = {:?}", buff);
+        for buff2 in buff {
+            let mut x = buff2.chars().collect::<Vec<_>>();
+            x.push('A');
+            let mut dummy = vec![x.clone()];
+            // println!("before {:?}", dummy);
+            if let Some(x2) = memo.get(&x.clone()) {
+                ll = *x2;
+            } else {
+                for _ in 0..2 {
+                    get_dir_paths(&dirpad, &mut dummy);
+                }
+                ll = dummy.iter().map(|v| v.len()).min().unwrap();
+                memo.insert(x, ll);
+            }
+            // println!("after {:?}", ll);
+            sublen += ll;
+        }
+        // println!("** sum is {}",sublen-1);
+        length.push(sublen - 1);
+        sublen = 0;
     }
-    let length = all_paths.iter().map(|v| v.len()).min().unwrap();
-    println!("min = {:?}",length);
-    length
+    let l = length.iter().min().unwrap();
+    // println!("min = {:?}", l);
+    *l
 }
 
-fn get_dir_paths(numpad:&Grid2D, code: &mut Vec<Vec<char>>) {
-
+fn get_dir_paths(numpad: &Grid2D, code: &mut Vec<Vec<char>>) {
     let mut result = Vec::new();
     //result.push(Vec::new());
 
     for a_code in code.clone() {
-
         let mut all_paths = Vec::new();
         all_paths.push(Vec::new());
-        let mut prev = 'A';    
-        
+        let mut prev = 'A';
+
         for dest in a_code {
             let prev_all_path = all_paths.clone();
-            let pos = get_paths(&numpad, prev, dest);
+            let pos = get_paths(numpad, prev, dest);
             for ap in all_paths.iter_mut() {
                 ap.push(pos[0].clone());
             }
@@ -94,52 +120,47 @@ fn get_dir_paths(numpad:&Grid2D, code: &mut Vec<Vec<char>>) {
             }
         }
         // flatten
-        // let mut numpadseq: Vec<Vec<char>> = Vec::new();
         for ap in all_paths {
             let zz = ap.into_iter().flatten().collect::<Vec<char>>();
-            // numpadseq.push(zz);
             result.push(zz);
         }
         // numpadseq
     }
     *code = result.clone();
-
 }
 
-fn get_num_paths(numpad:&Grid2D, code: &Vec<char>) -> Vec<Vec<char>> {
+fn get_num_paths(numpad: &Grid2D, code: &Vec<char>) -> Vec<Vec<char>> {
+    let mut all_paths = Vec::new();
+    all_paths.push(Vec::new());
+    let mut prev = 'A';
 
-        let mut all_paths = Vec::new();
-        all_paths.push(Vec::new());
-        let mut prev = 'A';    
-        
-        for dest in code {
-            let prev_all_path = all_paths.clone();
-            let pos = get_paths(&numpad, prev, *dest);
-            for ap in all_paths.iter_mut() {
-                ap.push(pos[0].clone());
-            }
-            if pos.len() > 1 {
-                for i in 1..pos.len() {
-                    let mut new_paths = prev_all_path.clone();
-                    for ap in new_paths.iter_mut() {
-                        ap.push(pos[i].clone());
-                        all_paths.push(ap.clone());
-                    }
+    for dest in code {
+        let prev_all_path = all_paths.clone();
+        let pos = get_paths(&numpad, prev, *dest);
+        for ap in all_paths.iter_mut() {
+            ap.push(pos[0].clone());
+        }
+        if pos.len() > 1 {
+            for i in 1..pos.len() {
+                let mut new_paths = prev_all_path.clone();
+                for ap in new_paths.iter_mut() {
+                    ap.push(pos[i].clone());
+                    all_paths.push(ap.clone());
                 }
             }
-            for ap in all_paths.iter_mut() {
-                ap.push(vec!['A']);
-                prev = *dest;
-            }
         }
-        // flatten
-        let mut numpadseq: Vec<Vec<char>> = Vec::new();
-        for ap in all_paths {
-            let zz = ap.into_iter().flatten().collect::<Vec<char>>();
-            numpadseq.push(zz);            
+        for ap in all_paths.iter_mut() {
+            ap.push(vec!['A']);
+            prev = *dest;
         }
-        numpadseq
-
+    }
+    // flatten
+    let mut numpadseq: Vec<Vec<char>> = Vec::new();
+    for ap in all_paths {
+        let zz = ap.into_iter().flatten().collect::<Vec<char>>();
+        numpadseq.push(zz);
+    }
+    numpadseq
 }
 
 fn get_paths(numpad: &Grid2D, from: char, to: char) -> Vec<Vec<char>> {
@@ -150,22 +171,22 @@ fn get_paths(numpad: &Grid2D, from: char, to: char) -> Vec<Vec<char>> {
     if let Some((l1, c1)) = numpad.get_char_position(from) {
         if let Some((l2, c2)) = numpad.get_char_position(to) {
             // if l1 < l2 {
-                for _ in l1..l2 {
-                    result.push('v');
-                }
+            for _ in l1..l2 {
+                result.push('v');
+            }
             // } else if l2 < l1 {
-                for _ in l2..l1 {
-                    result.push('^');
-                }
+            for _ in l2..l1 {
+                result.push('^');
+            }
             // }
             // if c1 < c2 {
-                for _ in c1..c2 {
-                    result.push('>');
-                }
+            for _ in c1..c2 {
+                result.push('>');
+            }
             // } else if c2 < c1 {
-                for _ in c2..c1 {
-                    result.push('<');
-                }
+            for _ in c2..c1 {
+                result.push('<');
+            }
             // }
         }
     }
@@ -187,21 +208,29 @@ fn get_paths(numpad: &Grid2D, from: char, to: char) -> Vec<Vec<char>> {
     perm
 }
 
-fn path_is_allowed(pad:&Grid2D, from:char, path:Vec<char>) -> bool {
+fn path_is_allowed(pad: &Grid2D, from: char, path: Vec<char>) -> bool {
     if let Some((l1, c1)) = pad.get_char_position(from) {
-        let mut current = (l1,c1);
-            for step in &path {
-                match step {
-                    '>' => {current=(current.0,current.1+1); },
-                    'v' => {current=(current.0+1,current.1); },
-                    '<' => {current=(current.0,current.1.saturating_sub(1)); },
-                    '^' => {current=(current.0.saturating_sub(1),current.1); },
-                    _ => {},
+        let mut current = (l1, c1);
+        for step in &path {
+            match step {
+                '>' => {
+                    current = (current.0, current.1 + 1);
                 }
-                if pad.get_at(current) == '#' {
-                    // println!("** removing path {:?} from {from}",path);
-                    return false;
+                'v' => {
+                    current = (current.0 + 1, current.1);
                 }
+                '<' => {
+                    current = (current.0, current.1.saturating_sub(1));
+                }
+                '^' => {
+                    current = (current.0.saturating_sub(1), current.1);
+                }
+                _ => {}
+            }
+            if pad.get_at(current) == '#' {
+                // println!("** removing path {:?} from {from}",path);
+                return false;
+            }
         }
     }
     true
@@ -244,8 +273,11 @@ mod tests {
     fn test_total() {
         assert_eq!(
             get_answer(include_str!("../assets/day21_input_demo1.txt")),
-            None
+            Some(126384)
         );
-        assert_eq!(get_answer(include_str!("../assets/day21_input.txt")), None);
+        assert_eq!(
+            get_answer(include_str!("../assets/day21_input.txt")),
+            Some(224326)
+        );
     }
 }
