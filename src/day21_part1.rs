@@ -13,8 +13,8 @@ pub fn main() {
     println!("-- Advent of Code - Day 21 - Part 1 --");
     let now = Instant::now();
 
-    let input = include_str!("../assets/day21_input_demo1.txt");
-    // let input = include_str!("../assets/day21_input.txt");
+    // let input = include_str!("../assets/day21_input_demo1.txt");
+    let input = include_str!("../assets/day21_input.txt");
 
     if let Some(answer) = get_answer(input) {
         println!("The answer is : {}", answer);
@@ -29,12 +29,13 @@ pub fn main() {
 
 fn get_answer(input: &str) -> Option<usize> {
     let mut memo: HashMap<Vec<char>, usize> = HashMap::new();
+    let mut memo2: HashMap<Vec<char>, Vec<Vec<char>>> = HashMap::new();
 
     let result = input
         .lines()
         .map(|line| {
             let code = line.chars().collect::<Vec<_>>();
-            let len = get_moves(&mut memo, &code);
+            let len = get_moves(&mut memo, &mut memo2, &code);
             let num = line
                 .chars()
                 .take(3)
@@ -70,13 +71,17 @@ fn ap_to_chunks(ap: &Vec<char>) -> Vec<Vec<char>> {
     chunks
 }
 
-fn get_moves(memo: &mut HashMap<Vec<char>, usize>, code: &Vec<char>) -> usize {
+fn get_moves(
+    memo: &mut HashMap<Vec<char>, usize>,
+    memo2: &mut HashMap<Vec<char>, Vec<Vec<char>>>,
+    code: &Vec<char>,
+) -> usize {
     let numpad = set_numpad();
     let dirpad = set_dirpad();
 
     let mut length = Vec::new();
     let all_paths = get_num_paths(&numpad, code);
-    // println!("{:?}", all_paths);
+
     for ap in &all_paths {
         let mut sublen = 0;
         let mut ll;
@@ -87,38 +92,46 @@ fn get_moves(memo: &mut HashMap<Vec<char>, usize>, code: &Vec<char>) -> usize {
                 ll = *x2;
             } else {
                 let mut chunk_vec = vec![chunk.clone()];
-                for robot in 0..2 {
-                    get_dir_paths(&dirpad, &mut chunk_vec);
+                for _ in 0..2 {
+                    get_dir_paths(memo2, &dirpad, &mut chunk_vec);
                 }
                 ll = chunk_vec.iter().map(|v| v.len()).min().unwrap();
-                memo.insert(chunk.clone(), ll);
+                memo.insert(chunk.clone(), ll);                
             }
-            println!("after {:?}", ll);
+            // println!("after {:?}", ll);
             sublen += ll;
         }
         // println!("** sum is {}",sublen-1);
         length.push(sublen);
-        sublen = 0;
     }
     let l = length.iter().min().unwrap();
     // println!("min = {:?}", l);
     *l
 }
 
-fn get_dir_paths(numpad: &Grid2D, code: &mut Vec<Vec<char>>) {
-    print!(" in gdp : {:?} =>",code);
-
+fn get_dir_paths(
+    memo2: &mut HashMap<Vec<char>, Vec<Vec<char>>>,
+    numpad: &Grid2D,
+    code: &mut Vec<Vec<char>>,
+) {
+    // print!(" in gdp : {:?} =>",code);
     let mut result = Vec::new();
-    //result.push(Vec::new());
 
     for a_code in code.clone() {
+        let chunks = ap_to_chunks(&a_code);
+        for chunk in chunks {
+            if let Some(rr) = memo2.get(&chunk) {
+                *code = rr.clone();
+            }
+        }
+
         let mut all_paths = Vec::new();
         all_paths.push(Vec::new());
         let mut prev = 'A';
 
-        for dest in a_code {
+        for dest in &a_code {
             let prev_all_path = all_paths.clone();
-            let pos = get_paths(numpad, prev, dest);
+            let pos = get_paths(numpad, prev, *dest);
             for ap in all_paths.iter_mut() {
                 ap.push(pos[0].clone());
             }
@@ -133,7 +146,7 @@ fn get_dir_paths(numpad: &Grid2D, code: &mut Vec<Vec<char>>) {
             }
             for ap in all_paths.iter_mut() {
                 ap.push(vec!['A']);
-                prev = dest;
+                prev = *dest;
             }
         }
         // flatten
@@ -150,9 +163,10 @@ fn get_dir_paths(numpad: &Grid2D, code: &mut Vec<Vec<char>>) {
                 result.remove(r);
             }
         }
+        memo2.insert(a_code, result.clone());
     }
-    println!(" {:?} =>",result.clone());
-    
+    // println!(" {:?}",result.clone());
+
     *code = result.clone();
 }
 
@@ -163,7 +177,7 @@ fn get_num_paths(numpad: &Grid2D, code: &Vec<char>) -> Vec<Vec<char>> {
 
     for dest in code {
         let prev_all_path = all_paths.clone();
-        let pos = get_paths(&numpad, prev, *dest);
+        let pos = get_paths(numpad, prev, *dest);
         for ap in all_paths.iter_mut() {
             ap.push(pos[0].clone());
         }
