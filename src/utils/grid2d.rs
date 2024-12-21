@@ -187,6 +187,21 @@ impl Grid2D {
     }
 
     ///
+    /// Renvoie la première occurence des coordonnées d'un caractère
+    ///
+    pub fn get_char_position( &self,cc: char ) -> Option<(usize,usize)> {
+
+        for l in 0..self.max_l {
+            for c in 0..self.max_c {
+                if self.get_at((l,c)).eq(&cc) {
+                    return Some((l,c));
+                }
+            }
+        }
+        None        
+    }
+
+    ///
     /// Renvoie un vecteur des caractères des 8 cases adjacentes
     /// (gauche, droite, haut, bas et diagonales)
     ///
