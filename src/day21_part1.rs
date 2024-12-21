@@ -13,8 +13,8 @@ pub fn main() {
     println!("-- Advent of Code - Day 21 - Part 1 --");
     let now = Instant::now();
 
-    // let input = include_str!("../assets/day21_input_demo1.txt");
-    let input = include_str!("../assets/day21_input.txt");
+    let input = include_str!("../assets/day21_input_demo1.txt");
+    // let input = include_str!("../assets/day21_input.txt");
 
     if let Some(answer) = get_answer(input) {
         println!("The answer is : {}", answer);
@@ -53,61 +53,92 @@ fn get_moves(code: &Vec<char>) -> usize {
     let numpad = set_numpad();
     let dirpad = set_dirpad();
 
-    let mut length = Vec::new();
-    let mut length2 = Vec::new();
-    let all_paths = get_all_paths(&numpad, &code);
-    // println!("path1 len {:?}",all_paths[0].len());
-    for ap in &all_paths {
-        let all_paths_2 = get_all_paths(&dirpad, &ap);
-        // println!("path2 len {:?}",all_paths_2[0].len());
-        let mut length3 = Vec::new();
-        for ap2 in all_paths_2 {
-            let all_paths_3 = get_all_paths(&dirpad, &ap2);
-            // println!("path3 len {:?}",all_paths_3[0].len());
-            length3.push(all_paths_3.iter().map(|v| v.len()).min().unwrap());
-        }
-        length2.push(*length3.iter().min().unwrap());
+    let mut all_paths = get_num_paths(&numpad, code);
+    for _ in 0 .. 2 {
+        get_dir_paths(&dirpad, &mut all_paths);
     }
-    length.push(*length2.iter().min().unwrap());
-
-    println!("min = {}",*length.iter().min().unwrap());
-    
-    *length.iter().min().unwrap()
+    let length = all_paths.iter().map(|v| v.len()).min().unwrap();
+    println!("min = {:?}",length);
+    length
 }
 
-fn get_all_paths(numpad:&Grid2D, code: &Vec<char>) -> Vec<Vec<char>> {
+fn get_dir_paths(numpad:&Grid2D, code: &mut Vec<Vec<char>>) {
 
-    let mut all_paths = Vec::new();
-    all_paths.push(Vec::new());
-    let mut prev = 'A';    
-    
-    for dest in code {
-        let prev_all_path = all_paths.clone();
-        let pos = get_paths(&numpad, prev, *dest);
-        for ap in all_paths.iter_mut() {
-            ap.push(pos[0].clone());
-        }
-        if pos.len() > 1 {
-            for i in 1..pos.len() {
-                let mut new_paths = prev_all_path.clone();
-                for ap in new_paths.iter_mut() {
-                    ap.push(pos[i].clone());
-                    all_paths.push(ap.clone());
+    let mut result = Vec::new();
+    //result.push(Vec::new());
+
+    for a_code in code.clone() {
+
+        let mut all_paths = Vec::new();
+        all_paths.push(Vec::new());
+        let mut prev = 'A';    
+        
+        for dest in a_code {
+            let prev_all_path = all_paths.clone();
+            let pos = get_paths(&numpad, prev, dest);
+            for ap in all_paths.iter_mut() {
+                ap.push(pos[0].clone());
+            }
+            if pos.len() > 1 {
+                for i in 1..pos.len() {
+                    let mut new_paths = prev_all_path.clone();
+                    for ap in new_paths.iter_mut() {
+                        ap.push(pos[i].clone());
+                        all_paths.push(ap.clone());
+                    }
                 }
             }
+            for ap in all_paths.iter_mut() {
+                ap.push(vec!['A']);
+                prev = dest;
+            }
         }
-        for ap in all_paths.iter_mut() {
-            ap.push(vec!['A']);
-            prev = *dest;
+        // flatten
+        // let mut numpadseq: Vec<Vec<char>> = Vec::new();
+        for ap in all_paths {
+            let zz = ap.into_iter().flatten().collect::<Vec<char>>();
+            // numpadseq.push(zz);
+            result.push(zz);
         }
+        // numpadseq
     }
-    // flatten
-    let mut numpadseq: Vec<Vec<char>> = Vec::new();
-    for ap in all_paths {
-        let zz = ap.into_iter().flatten().collect::<Vec<char>>();
-        numpadseq.push(zz);
-    }
-    numpadseq
+    *code = result.clone();
+
+}
+
+fn get_num_paths(numpad:&Grid2D, code: &Vec<char>) -> Vec<Vec<char>> {
+
+        let mut all_paths = Vec::new();
+        all_paths.push(Vec::new());
+        let mut prev = 'A';    
+        
+        for dest in code {
+            let prev_all_path = all_paths.clone();
+            let pos = get_paths(&numpad, prev, *dest);
+            for ap in all_paths.iter_mut() {
+                ap.push(pos[0].clone());
+            }
+            if pos.len() > 1 {
+                for i in 1..pos.len() {
+                    let mut new_paths = prev_all_path.clone();
+                    for ap in new_paths.iter_mut() {
+                        ap.push(pos[i].clone());
+                        all_paths.push(ap.clone());
+                    }
+                }
+            }
+            for ap in all_paths.iter_mut() {
+                ap.push(vec!['A']);
+                prev = *dest;
+            }
+        }
+        // flatten
+        let mut numpadseq: Vec<Vec<char>> = Vec::new();
+        for ap in all_paths {
+            let zz = ap.into_iter().flatten().collect::<Vec<char>>();
+            numpadseq.push(zz);            
+        }
+        numpadseq
 
 }
 
