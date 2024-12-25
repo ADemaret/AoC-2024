@@ -1,4 +1,7 @@
-use std::{collections::HashSet, time::Instant};
+use std::{
+    collections::{HashMap, HashSet},
+    time::Instant,
+};
 
 // personal functions
 //use crate::utils::grid2d;
@@ -24,51 +27,58 @@ pub fn main() {
 //
 
 fn get_answer(input: &str) -> Option<usize> {
-    let pcs = input
-        .lines()
-        .map(|line| line.split("-").collect::<Vec<&str>>())
-        .collect::<Vec<_>>();
+    let mut tree: HashMap<&str, Vec<&str>> = HashMap::new();
+    input.lines().for_each(|line| {
+        let mut vec;
+        let (l1, l2) = line.split_once("-").unwrap();
 
+        if tree.contains_key(l1) {
+            vec = tree.get(&l1).unwrap().clone();
+            vec.push(l2);
+            tree.insert(l1, vec);
+        } else {
+            tree.insert(l1, vec![l2]);
+        }
+
+        if tree.contains_key(l2) {
+            vec = tree.get(&l2).unwrap().clone();
+            vec.push(l1);
+            tree.insert(l2, vec);
+        } else {
+            tree.insert(l2, vec![l1]);
+        }
+    });
+
+    // t.0  - t1   -
+    // "ta" - "co" - "de"
     let mut trios = HashSet::new();
-    for (i,l1) in pcs.iter().enumerate() {
-        println!("{i}");
-        for l2 in &pcs {
-            for l3 in &pcs {
-                if l1 != l2 && l1 != l3 && l2 != l3 {
-                    if (l1[1] == l2[0] && l2[1] == l3[0] && l3[1] == l1[0])
-                        || (l1[1] == l2[0] && l2[1] == l3[1] && l3[0] == l1[0])
-                        || (l1[0] == l2[0] && l2[1] == l3[0] && l3[1] == l1[1])
-                        || (l1[0] == l2[0] && l2[1] == l3[1] && l3[0] == l1[1])
-                    {
-                        let mut a_trio = vec![l1[0], l1[1], l2[1]];
-                        if l1[0].starts_with('t')
-                            || l1[1].starts_with('t')
-                            || l2[1].starts_with('t')
-                        {
-                            a_trio.sort();
-                            trios.insert(a_trio);
-                        }
-                    } else if l1[1] == l2[1] && l2[0] == l3[0] && l3[1] == l1[0]
-                        || (l1[1] == l2[1] && l2[0] == l3[1] && l3[0] == l1[0])
-                        || (l1[0] == l2[1] && l2[0] == l3[0] && l3[1] == l1[1])
-                        || (l1[0] == l2[1] && l2[0] == l3[1] && l3[0] == l1[1])
-                    {
-                        let mut a_trio = vec![l1[0], l1[1], l2[0]];
-                        if l1[0].starts_with('t')
-                            || l1[1].starts_with('t')
-                            || l2[0].starts_with('t')
-                        {
-                            a_trio.sort();
-                            trios.insert(a_trio);
-                        }
+    for t in &tree {
+        if t.0.starts_with('t') {
+            // println!("{}", t.0);
+            for t1 in t.1 {
+                // println!("  {}", t1);
+                if let Some(t2) = tree.get(t1) {
+                    // println!("    {:?}", t2);
+                    let common = t2
+                        .iter()
+                        .filter(|&x| t.1.contains(x))
+                        .cloned()
+                        .collect::<Vec<_>>();
+                    // println!("    => common : {:?}", common);
+                    for last in common {
+                        let mut v = vec![t.0, t1, last];
+                        v.sort();
+                        // println!("      insert {:?}",v);
+                        trios.insert(v.clone());
                     }
                 }
             }
         }
     }
-    for t in &trios {
-        println!("{:?}", t);
-    }
+
+    // for t in &trios {
+    //     println!("{:?}", t);
+    // }
     Some(trios.len())
 }
 
@@ -82,6 +92,9 @@ mod tests {
             get_answer(include_str!("../assets/day23_input_demo1.txt")),
             Some(7)
         );
-        assert_eq!(get_answer(include_str!("../assets/day23_input.txt")), Some(1378));
+        assert_eq!(
+            get_answer(include_str!("../assets/day23_input.txt")),
+            Some(1378)
+        );
     }
 }
